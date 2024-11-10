@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func handleConnection(conn net.Conn) {
@@ -18,9 +19,23 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	_ = requestLine
+	requestLine = strings.TrimSpace(requestLine)
+	parts := strings.Split(requestLine, " ")
 
-	conn.Write([]byte("HTTP/1.1 200 OK \r\n\r\n"))
+	if len(parts) != 3 {
+		fmt.Println("Invalid request line: ", requestLine)
+		return
+	}
+
+	method := parts[0]
+	path := parts[1]
+	version := parts[2]
+
+	fmt.Printf("Method: %s\n", method)
+	fmt.Printf("Path: %s\n", path)
+	fmt.Printf("Version: %s\n", version)
+
+	conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 }
 
 func main() {
@@ -30,7 +45,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = listen.Accept()
 	if err != nil {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
