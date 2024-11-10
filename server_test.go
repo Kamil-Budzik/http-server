@@ -1,37 +1,55 @@
 package main
 
 import (
+	"bufio"
 	"net"
+	"strings"
 	"testing"
 	"time"
 )
 
 func TestHandleConnection(t *testing.T) {
-	// Start the server in a separate goroutine
-	go main()
+	go func() {
+		main()
+	}()
 
 	// Wait for the server to start
 	time.Sleep(1 * time.Second)
 
-	conn, err := net.Dial("tcp", "localhost:4221")
-	if err != nil {
-		t.Fatalf("Failed to connect to server: %v", err)
-	}
-	defer conn.Close()
-
-	_, err = conn.Write([]byte("GET / HTTP/1.1\r\n"))
-	if err != nil {
-		t.Fatalf("Failed to write request: %v", err)
-	}
-
-	// Read the response
-	buf := make([]byte, 1024)
-	_, err = conn.Read(buf)
-	if err != nil {
-		t.Fatalf("Failed to read response: %v", err)
+	tests := []struct {
+		request      string
+		expectedCode string
+	}{
+		{
+			request:      "GET /abcdefg HTTP/1.1\r\n\r\n",
+			expectedCode: "HTTP/1.1 404 Not Found",
+		},
+		{
+			request:      "GET / HTTP/1.1\r\n\r\n",
+			expectedCode: "HTTP/1.1 200 OK",
+		},
 	}
 
-	if string(buf[:17]) != "HTTP/1.1 200 OK\r\n" {
-		t.Errorf("Expected response to start with 'HTTP/1.1 200 OK', but got %s", string(buf[:17]))
+	for _, tt := range tests {
+		conn, err := net.Dial("tcp", "localhost:4221")
+		if err != nil {
+			t.Fatalf("Failed to connect to server: %v", err)
+		}
+		defer conn.Close()
+
+		_, err = conn.Write([]byte(tt.request))
+		if err != nil {
+			t.Fatalf("Failed to write to connection: %v", err)
+		}
+
+		reader := bufio.NewReader(conn)
+		responseLine, err := reader.ReadString('\n')
+		if err != nil {
+			t.Fatalf("Failed to read response: %v", err)
+		}
+
+		if !strings.HasPrefix(responseLine, tt.expectedCode) {
+			t.Errorf("Expected response to start with %q, but got %q", tt.expectedCode, responseLine)
+		}
 	}
 }
