@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+func sendResponse(conn net.Conn, code int, msg string) {
+	response := fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n", code, msg)
+	conn.Write([]byte(response))
+}
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -34,6 +39,13 @@ func handleConnection(conn net.Conn) {
 	fmt.Printf("Method: %s\n", method)
 	fmt.Printf("Path: %s\n", path)
 	fmt.Printf("Version: %s\n", version)
+
+	switch path {
+	case "/":
+		sendResponse(conn, 200, "OK")
+	default:
+		sendResponse(conn, 404, "Not Found")
+	}
 
 	conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 }
