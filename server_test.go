@@ -53,3 +53,9 @@ func TestHandleConnection(t *testing.T) {
 		}
 	}
 }
+func TestExtractPathParameters(t *testing.T) {
+	rbody := extractPathParameters("/echo/abc")
+	if rbody != "abc" {
+		t.Errorf("Expected return type to be abc, but got %q", rbody)
+	}
+}

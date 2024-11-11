@@ -13,6 +13,15 @@ func sendResponse(conn net.Conn, code int, msg string) {
 	conn.Write([]byte(response))
 }
 
+func extractPathParameters(path string) string {
+	segments := strings.Split(path, "/")
+	fmt.Println(segments)
+	if len(segments) > 1 {
+		return segments[len(segments)-1]
+	}
+	return ""
+}
+
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -43,6 +52,9 @@ func handleConnection(conn net.Conn) {
 	switch path {
 	case "/":
 		sendResponse(conn, 200, "OK")
+	case "/echo":
+		rbody := extractPathParameters(path)
+		sendResponse(conn, 200, rbody)
 	default:
 		sendResponse(conn, 404, "Not Found")
 	}
