@@ -33,6 +33,23 @@ func TestHandleConnection(t *testing.T) {
 		testRequest(t, "GET /user-agent HTTP/1.1\r\nUser-Agent: foobar/1.2.3\r\n\r\n",
 			"HTTP/1.1 200 OK", "foobar/1.2.3")
 	})
+
+	t.Run("TestConcurrentConnections", func(t *testing.T) {
+		numRequests := 4
+		done := make(chan bool, numRequests)
+
+		for i := 0; i < numRequests; i++ {
+			go func() {
+				testRequest(t, "GET / HTTP/1.1\r\n\r\n", "HTTP/1.1 200 OK", "")
+				done <- true
+			}()
+		}
+
+		// Wait for all requests to complete
+		for i := 0; i < numRequests; i++ {
+			<-done
+		}
+	})
 }
 
 func testRequest(t *testing.T, request string, expectedCode string, expectedBody string) {
