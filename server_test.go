@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
@@ -85,10 +86,13 @@ func testRequest(t *testing.T, request string, expectedCode string, expectedBody
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err.Error() == "EOF" {
+				fmt.Println("BREAKING")
 				break
 			}
 		}
 		line = strings.TrimSpace(line)
+
+		t.Log("SIEMA", line)
 		if line != "" {
 			body = line
 		}

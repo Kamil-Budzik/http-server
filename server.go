@@ -1,58 +1,24 @@
 package main
 
 import (
-	"bufio"
+	"flag"
 	"fmt"
+	"http-server/connection"
+	"log"
 	"net"
-	"os"
 	"strings"
 )
 
-func sendResponse(conn net.Conn, code int, msg string, body string) {
-	headers := fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n", code, msg)
-	headers += "Content-Type: text/plain\r\n"
-	headers += fmt.Sprintf("Content-Length: %d \r\n\r\n", len(body))
-	headers += body
-	headers += "\r\n"
+func (s *Server) handleConnection(conn net.Conn) {
+	s.ActiveClients++
+	defer func() {
+		conn.Close()
+		s.ActiveClients--
+	}()
 
-	conn.Write([]byte(headers))
-}
+	clientConn := connection.NewConnection(conn)
 
-func getHeaderValue(reader *bufio.Reader, header string) string {
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("ERR")
-		}
-
-		if strings.HasPrefix(line, header) {
-			segments := strings.Split(line, ": ")
-			return segments[len(segments)-1]
-		}
-	}
-}
-
-func routeRequest(path string, reader *bufio.Reader, conn net.Conn) {
-	switch {
-	case path == "/":
-		sendResponse(conn, 200, "OK", "")
-	case strings.HasPrefix(path, "/echo"):
-		rbody := strings.TrimPrefix(path, "/echo/")
-		sendResponse(conn, 200, "OK", rbody)
-	case path == "/user-agent":
-		userHeader := getHeaderValue(reader, "User-Agent")
-		sendResponse(conn, 200, "OK", userHeader)
-	default:
-		sendResponse(conn, 404, "Not Found", "")
-	}
-}
-
-func handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-	reader := bufio.NewReader(conn)
-
-	requestLine, err := reader.ReadString('\n')
+	requestLine, err := clientConn.Reader.ReadString('\n')
 	if err != nil {
 		fmt.Println("Error reading request:", err)
 		return
@@ -62,7 +28,7 @@ func handleConnection(conn net.Conn) {
 	parts := strings.Split(requestLine, " ")
 
 	if len(parts) != 3 {
-		fmt.Println("Invalid request line: ", requestLine)
+		fmt.Println("Invalid request line:", requestLine)
 		return
 	}
 
@@ -74,32 +40,65 @@ func handleConnection(conn net.Conn) {
 	fmt.Printf("Path: %s\n", path)
 	fmt.Printf("Version: %s\n", version)
 
-	routeRequest(path, reader, conn)
+	// Handle routing
+	switch {
+	case path == "/":
+		clientConn.SendResponse(200, "OK", "")
+	case strings.HasPrefix(path, "/echo"):
+		responseBody := strings.TrimPrefix(path, "/echo/")
+		clientConn.SendResponse(200, "OK", responseBody)
+	case path == "/user-agent":
+		userHeader := clientConn.GetHeaderValue("User-Agent")
+		clientConn.SendResponse(200, "OK", userHeader)
+	default:
+		clientConn.SendResponse(404, "Not Found", "")
+	}
 }
 
-func main() {
-	listen, err := net.Listen("tcp", "0.0.0.0:4221")
-	if err != nil {
-		fmt.Println("Failed to bind to port 4221")
-		os.Exit(1)
-	}
+type Server struct {
+	Address       string
+	Port          int
+	ActiveClients int
+	ShutdownChan  chan struct{}
+}
 
+func (s *Server) start() {
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.Address, s.Port))
 	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
+		log.Fatal(err)
 	}
+	defer listener.Close()
 
-	defer listen.Close()
-	fmt.Println("Server started at port 4221")
+	go func() {
+		<-s.ShutdownChan
+		fmt.Println("Server shutting down...")
+		listener.Close()
+	}()
 
 	for {
-		conn, err := listen.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error acceptng connection:", err)
+			log.Println(err)
 			continue
 		}
-
-		go handleConnection(conn)
+		go s.handleConnection(conn)
 	}
+}
+
+var directory string
+
+func main() {
+	// Read directory flag
+	flag.StringVar(&directory, "directory", "tmp", "specifies the directory where the files are stored, as an absolute path")
+	flag.Parse()
+	fmt.Println("DIRECTORY", directory)
+
+	server := &Server{
+		Address:      "localhost",
+		Port:         4221,
+		ShutdownChan: make(chan struct{}),
+	}
+	server.start()
+	fmt.Println("Server started at port 4221")
 
 }
