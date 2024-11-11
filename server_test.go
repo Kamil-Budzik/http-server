@@ -19,14 +19,22 @@ func TestHandleConnection(t *testing.T) {
 	tests := []struct {
 		request      string
 		expectedCode string
+		expectedBody string
 	}{
 		{
 			request:      "GET /abcdefg HTTP/1.1\r\n\r\n",
 			expectedCode: "HTTP/1.1 404 Not Found",
+			expectedBody: "",
 		},
 		{
 			request:      "GET / HTTP/1.1\r\n\r\n",
 			expectedCode: "HTTP/1.1 200 OK",
+			expectedBody: "",
+		},
+		{
+			request:      "GET /echo/abc HTTP/1.1\r\n\r\n",
+			expectedCode: "HTTP/1.1 200 OK",
+			expectedBody: "abc",
 		},
 	}
 
@@ -51,11 +59,29 @@ func TestHandleConnection(t *testing.T) {
 		if !strings.HasPrefix(responseLine, tt.expectedCode) {
 			t.Errorf("Expected response to start with %q, but got %q", tt.expectedCode, responseLine)
 		}
-	}
-}
-func TestExtractPathParameters(t *testing.T) {
-	rbody := extractPathParameters("/echo/abc")
-	if rbody != "abc" {
-		t.Errorf("Expected return type to be abc, but got %q", rbody)
+
+		// Skip the rest if expected body is empty
+		if tt.expectedBody == "" {
+			continue
+		}
+
+		// Store the last non-empty line
+		var body string
+		for {
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				if err.Error() == "EOF" {
+					break
+				}
+			}
+			line = strings.TrimSpace(line)
+			if line != "" {
+				body = line
+			}
+		}
+
+		if tt.expectedBody != body {
+			t.Errorf("Expected body to be %q, but got %q", tt.expectedBody, body)
+		}
 	}
 }

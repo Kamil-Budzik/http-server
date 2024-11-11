@@ -8,18 +8,25 @@ import (
 	"strings"
 )
 
-func sendResponse(conn net.Conn, code int, msg string) {
-	response := fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n", code, msg)
-	conn.Write([]byte(response))
+func sendResponse(conn net.Conn, code int, msg string, body string) {
+	headers := fmt.Sprintf("HTTP/1.1 %d %s\r\n\r\n", code, msg)
+	headers += "Content-Type: text/plain\r\n"
+	headers += fmt.Sprintf("Content-Length: %d \r\n\r\n%s", len(body), body)
+	headers += "\r\n"
+
+	conn.Write([]byte(headers))
 }
 
-func extractPathParameters(path string) string {
-	segments := strings.Split(path, "/")
-	fmt.Println(segments)
-	if len(segments) > 1 {
-		return segments[len(segments)-1]
+func routeRequest(path string, conn net.Conn) {
+	switch {
+	case path == "/":
+		sendResponse(conn, 200, "OK", "")
+	case strings.HasPrefix(path, "/echo"):
+		rbody := strings.TrimPrefix(path, "/echo/")
+		sendResponse(conn, 200, "OK", rbody)
+	default:
+		sendResponse(conn, 404, "Not Found", "")
 	}
-	return ""
 }
 
 func handleConnection(conn net.Conn) {
@@ -49,17 +56,7 @@ func handleConnection(conn net.Conn) {
 	fmt.Printf("Path: %s\n", path)
 	fmt.Printf("Version: %s\n", version)
 
-	switch path {
-	case "/":
-		sendResponse(conn, 200, "OK")
-	case "/echo":
-		rbody := extractPathParameters(path)
-		sendResponse(conn, 200, rbody)
-	default:
-		sendResponse(conn, 404, "Not Found")
-	}
-
-	conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	routeRequest(path, conn)
 }
 
 func main() {
