@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestHandleConnection(t *testing.T) {
-	// Start the server in a goroutine
 	go func() {
 		main()
 	}()
@@ -50,6 +50,21 @@ func TestHandleConnection(t *testing.T) {
 		for i := 0; i < numRequests; i++ {
 			<-done
 		}
+	})
+
+	t.Run("TestFileReadingEndpoint", func(t *testing.T) {
+		tmpFileName := "./tmp/testfile.txt"
+		err := os.WriteFile(tmpFileName, []byte("This is a test file content."), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+		defer os.Remove(tmpFileName)
+
+		testRequest(t, "GET /files/testfile.txt HTTP/1.1\r\n\r\n", "HTTP/1.1 200 OK", "This is a test file content.")
+	})
+
+	t.Run("TestFileNotFound", func(t *testing.T) {
+		testRequest(t, "GET /files/nonexistentfile.txt HTTP/1.1\r\n\r\n", "HTTP/1.1 404 Not Found", "")
 	})
 }
 

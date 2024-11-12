@@ -32,23 +32,22 @@ func (m *MockConn) SetReadDeadline(t time.Time) error  { return nil }
 func (m *MockConn) SetWriteDeadline(t time.Time) error { return nil }
 
 // TestSendResponse tests the SendResponse method of the Connection struct.
-// func TestSendResponse(t *testing.T) {
-// 	mockConn := &MockConn{}
-// 	connection := NewConnection(mockConn)
-//
-// 	code := 200
-// 	msg := "OK"
-// 	body := "Hello, World!"
-//
-// 	connection.SendResponse(code, msg, body)
-//
-// 	expectedOutput := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!\r/n"
-// 	if mockConn.writeBuffer.String() != expectedOutput {
-// 		t.Errorf("expected %q, got %q", expectedOutput, mockConn.writeBuffer.String())
-// 	}
-// }
+func TestSendResponse(t *testing.T) {
+	mockConn := &MockConn{}
+	connection := NewConnection(mockConn)
 
-// TestGetHeaderValue tests the GetHeaderValue method of the Connection struct.
+	code := 200
+	msg := "OK"
+	body := "Hello, World!"
+
+	connection.SendResponse(code, msg, body)
+
+	expectedOutput := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!\r/n"
+	if mockConn.writeBuffer.String() != expectedOutput {
+		t.Errorf("expected %q, got %q", expectedOutput, mockConn.writeBuffer.String())
+	}
+}
+
 func TestGetHeaderValue(t *testing.T) {
 	mockConn := &MockConn{}
 	mockConn.readBuffer.WriteString("Content-Type: text/plain\r\nContent-Length: 13\r\n\r\n")

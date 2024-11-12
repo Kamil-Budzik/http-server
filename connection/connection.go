@@ -19,9 +19,9 @@ func NewConnection(conn net.Conn) *Connection {
 	}
 }
 
-func (c *Connection) SendResponse(code int, msg string, body string) {
+func (c *Connection) SendResponse(code int, msg string, contentType string, body string) {
 	headers := fmt.Sprintf("HTTP/1.1 %d %s\r\n", code, msg)
-	headers += "Content-Type: text/plain\r\n"
+	headers += fmt.Sprintf("Content-Type: %s\r\n", contentType)
 	headers += fmt.Sprintf("Content-Length: %d\r\n\r\n", len(body))
 	headers += body
 	headers += "\r\n"
