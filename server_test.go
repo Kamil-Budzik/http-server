@@ -92,7 +92,6 @@ func testRequest(t *testing.T, request string, expectedCode string, expectedBody
 		}
 		line = strings.TrimSpace(line)
 
-		t.Log("SIEMA", line)
 		if line != "" {
 			body = line
 		}

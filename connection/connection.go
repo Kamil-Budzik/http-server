@@ -39,7 +39,8 @@ func (c *Connection) GetHeaderValue(header string) string {
 
 		if strings.HasPrefix(line, header) {
 			segments := strings.Split(line, ": ")
-			return segments[len(segments)-1]
+			return strings.TrimSuffix(segments[len(segments)-1], "\r\n")
+
 		}
 	}
 }
