@@ -38,11 +38,12 @@ func TestSendResponse(t *testing.T) {
 
 	code := 200
 	msg := "OK"
+	contentType := "text/plain"
 	body := "Hello, World!"
 
-	connection.SendResponse(code, msg, body)
+	connection.SendResponse(code, msg, contentType, body)
 
-	expectedOutput := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!\r/n"
+	expectedOutput := "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!\r\n"
 	if mockConn.writeBuffer.String() != expectedOutput {
 		t.Errorf("expected %q, got %q", expectedOutput, mockConn.writeBuffer.String())
 	}
@@ -59,5 +60,23 @@ func TestGetHeaderValue(t *testing.T) {
 
 	if headerValue != expectedValue {
 		t.Errorf("expected %q, got %q", expectedValue, headerValue)
+	}
+}
+
+func TestReadBody(t *testing.T) {
+	headers := "POST /test HTTP/1.1\r\nContent-Length: 5\r\n\r\n"
+	body := "12345"
+	rawRequest := headers + body
+
+	mockConn := &MockConn{}
+	mockConn.readBuffer.WriteString(rawRequest)
+
+	connection := NewConnection(mockConn)
+
+	result := connection.ReadBody()
+
+	expected := "12345"
+	if result != expected {
+		t.Errorf("expected body %q, got %q", expected, result)
 	}
 }

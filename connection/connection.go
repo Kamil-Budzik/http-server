@@ -3,7 +3,9 @@ package connection
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -43,4 +45,20 @@ func (c *Connection) GetHeaderValue(header string) string {
 
 		}
 	}
+}
+
+func (c *Connection) ReadBody() string {
+	contentLength, err := strconv.Atoi(c.GetHeaderValue("Content-Length"))
+	if err != nil {
+		fmt.Println("Invalid Content-Length:", contentLength)
+		c.SendResponse(400, "Bad Request", "text/plain", "")
+	}
+	bodyBytes := make([]byte, contentLength+2)
+	n, err := io.ReadFull(c.Reader, bodyBytes)
+	bodyBytes = []byte(strings.TrimSpace(string(bodyBytes)))
+	if err != nil || n != contentLength {
+		fmt.Println("Error reading body:", err)
+		c.SendResponse(500, "Internal Server Error", "text/plain", "Error reading body")
+	}
+	return string(bodyBytes)
 }
